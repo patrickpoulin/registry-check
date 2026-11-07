@@ -9,6 +9,8 @@
     (name, type) => `https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(name)}&type=${type}`,
   ];
   const REGISTER_URL = (d) => `https://www.namecheap.com/domains/registration/results/?domain=${encodeURIComponent(d)}`;
+  const PRICE_API = String((window.REGISTRY_CHECK_CONFIG || {}).priceApi || "").replace(/\/+$/, "");
+  const PRICE_BATCH = 50;
   const DNS_PARALLEL = 8;
   const RDAP_PARALLEL = 3;
   const TIMEOUT_MS = 10000;
@@ -151,9 +153,82 @@
     };
   }
 
+  // ---------- price service (optional; see worker/README.md) ----------
+  // Batches free names into POST {PRICE_API}/check { domains: [...] } and resolves each with
+  // { premium, price, renewal, reserved } or null when the service can't answer.
+  function makePricer(owner) {
+    let waiting = [];
+    let timer = null;
+    let inflight = 0;
+    const queue = [];
+    const pump = () => {
+      while (inflight < 2 && queue.length) {
+        const batch = queue.shift();
+        inflight++;
+        send(batch).finally(() => { inflight--; pump(); });
+      }
+    };
+    const flush = () => {
+      clearTimeout(timer); timer = null;
+      while (waiting.length) queue.push(waiting.splice(0, PRICE_BATCH));
+      pump();
+    };
+    async function send(batch) {
+      let results = {};
+      try {
+        const res = await fetchT(`${PRICE_API}/check`, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain" }, // simple request: no CORS preflight
+          body: JSON.stringify({ domains: batch.map((b) => b.domain) }),
+        });
+        if (!res.ok) throw new Error(String(res.status));
+        results = (await res.json()).results || {};
+      } catch {
+        owner.priceError = true;
+      }
+      for (const b of batch) {
+        const r = results[b.domain];
+        b.resolve(r ? {
+          premium: !!r.premium,
+          price: typeof r.price === "number" ? r.price : null,
+          renewal: typeof r.renewal === "number" ? r.renewal : null,
+          reserved: r.purchasable === false,
+        } : null);
+      }
+    }
+    return {
+      add(domain) {
+        return new Promise((resolve) => {
+          waiting.push({ domain, resolve });
+          if (waiting.length >= PRICE_BATCH) flush();
+          else if (!timer) timer = setTimeout(flush, 400);
+        });
+      },
+      clear() { waiting = []; queue.length = 0; clearTimeout(timer); timer = null; },
+    };
+  }
+
+  const premiumBox = $("#show-premium");
+  premiumBox.checked = false;
+  if (!PRICE_API) {
+    premiumBox.disabled = true;
+    $("#premium-toggle").title = "Premium detection isn't set up yet. See worker/README.md.";
+    $("#premium-toggle").classList.add("off");
+    $("#premium-count").textContent = "(not set up yet)";
+  }
+  premiumBox.addEventListener("change", () => {
+    showPremium = premiumBox.checked;
+    grid.classList.toggle("show-premium", showPremium);
+    updateProgress();
+  });
+
   // ---------- run ----------
   let run = null; // { id, tld, ... }
   let view = "available";
+  let showPremium = false;
+  const money = (n) => (typeof n === "number" ? `$${n.toLocaleString(undefined, { maximumFractionDigits: n < 100 ? 2 : 0 })}` : "");
+  const isFree = (s) => s === "available" || s === "likely";
+  const premiumHidden = (tile) => tile.dataset.premium === "yes" && !showPremium;
 
   const grid = $("#grid");
 
@@ -166,14 +241,16 @@
   document.querySelectorAll("[data-view]").forEach((t) => t.addEventListener("click", () => setView(t.dataset.view)));
 
   function tally() {
-    const c = { available: 0, taken: 0, all: 0, done: 0 };
+    const c = { available: 0, taken: 0, all: 0, done: 0, premium: 0, hidden: 0 };
     for (const tile of grid.children) {
       if (!lengths.has(Number(tile.dataset.len))) continue;
-      c.all++;
       const s = tile.dataset.state;
-      if (s === "available" || s === "likely") c.available++;
-      else if (s === "taken") c.taken++;
+      if (tile.dataset.premium === "yes") c.premium++;
       if (s !== "checking") c.done++;
+      if (premiumHidden(tile)) { c.hidden++; continue; }
+      c.all++;
+      if (isFree(s)) c.available++;
+      else if (s === "taken") c.taken++;
     }
     return c;
   }
@@ -190,14 +267,19 @@
     $("#n-available").textContent = fmt(c.available);
     $("#n-taken").textContent = fmt(c.taken);
     $("#n-all").textContent = fmt(c.all);
-    const pct = c.all ? (c.done / c.all) * 100 : 0;
+    const totalWords = c.all + c.hidden;
+    const pct = totalWords ? (c.done / totalWords) * 100 : 0;
     $("#bar").style.width = `${pct}%`;
-    const finished = c.done >= c.all;
-    $("#progress-text").textContent = finished
-      ? `Done. ${fmt(c.available)} of ${fmt(c.all)} words look free on .${run.tld}.`
+    const finished = c.done >= totalWords;
+    const premiumNote = c.premium
+      ? (showPremium ? ` ${fmt(c.premium)} of them are premium.` : ` ${fmt(c.premium)} premium ${c.premium === 1 ? "name is" : "names are"} hidden.`)
+      : "";
+    $("#progress-text").textContent = (finished
+      ? `Done. ${fmt(c.available)} words look free on .${run.tld}.`
       : run.stopped
-        ? `Stopped after ${fmt(c.done)} of ${fmt(c.all)} words.`
-        : `Checking ${fmt(c.done)} of ${fmt(c.all)} words…`;
+        ? `Stopped after ${fmt(c.done)} of ${fmt(totalWords)} words.`
+        : `Checking ${fmt(c.done)} of ${fmt(totalWords)} words…`) + premiumNote + (run.priceError ? " Prices couldn't be loaded, so premium names may be included." : "");
+    if (PRICE_API) $("#premium-count").textContent = c.premium ? `(${fmt(c.premium)})` : "";
     if (finished || run.stopped) { $("#stop").hidden = true; $(".progress").classList.add("done"); }
 
     const visible = [...grid.children].some((t) => !t.hidden && matchesView(t));
@@ -212,18 +294,31 @@
 
   function matchesView(tile) {
     const s = tile.dataset.state;
+    if (premiumHidden(tile)) return false;
     if (view === "all") return true;
-    if (view === "available") return s === "available" || s === "likely";
+    if (view === "available") return isFree(s);
     return s === "taken";
   }
 
-  function setTile(tile, state) {
+  function setTile(tile, state, info) {
     tile.dataset.state = state;
     const a = tile.firstElementChild;
     const domain = `${tile.dataset.word}.${run.tld}`;
-    if (state === "available" || state === "likely") {
+    if (info && info.premium && isFree(state)) tile.dataset.premium = "yes";
+    if (info && isFree(state) && typeof info.price === "number") {
+      const p = document.createElement("span");
+      p.className = "p";
+      p.textContent = money(info.price);
+      a.append(p);
+    }
+    if (isFree(state)) {
       a.href = REGISTER_URL(domain);
-      a.title = state === "likely" ? "Probably available (registry didn't confirm). Click to check with a registrar." : "Available. Click to register.";
+      a.title = info && info.premium
+        ? `Premium name: ${money(info.price)} to register${typeof info.renewal === "number" ? `, ${money(info.renewal)}/yr to renew` : ""}.`
+        : state === "likely" ? "Probably available (registry didn't confirm). Click to check with a registrar." : "Available. Click to register.";
+    } else if (info && info.reserved) {
+      a.href = REGISTER_URL(domain);
+      a.title = "Not registered, but the registry doesn't allow it to be bought (reserved).";
     } else if (state === "taken") {
       a.href = `https://${domain}`;
       a.title = "Taken. Click to visit.";
@@ -249,6 +344,7 @@
     run.stopped = true;
     run.dnsQ.clear();
     run.rdapQ.clear();
+    run.pricer && run.pricer.clear();
     updateProgress();
   }
   $("#stop").addEventListener("click", stop);
@@ -267,6 +363,7 @@
     const id = Symbol("run");
     run = { id, tld, stopped: false, dnsQ: makeQueue(DNS_PARALLEL), rdapQ: makeQueue(RDAP_PARALLEL) };
     const me = run;
+    if (PRICE_API) me.pricer = makePricer(me);
 
     $("#status").hidden = false;
     $("#status-title").textContent = `Checking .${tld}`;
@@ -306,7 +403,7 @@
       li.dataset.word = w;
       li.dataset.len = w.length;
       li.dataset.state = "checking";
-      li.innerHTML = `<a target="_blank" rel="noopener"><span class="w">${w}</span><span class="t">.${tld}</span></a>`;
+      li.innerHTML = `<a target="_blank" rel="noopener"><span class="n"><span class="w">${w}</span><span class="t">.${tld}</span></span></a>`;
       frag.append(li);
       return li;
     });
@@ -332,9 +429,16 @@
     };
 
     for (const tile of tiles) {
-      me.dnsQ.add(() => checkOne(tile)).then((state) => {
+      me.dnsQ.add(() => checkOne(tile)).then(async (state) => {
         if (run !== me || !state) return;
-        setTile(tile, state);
+        let info = null;
+        if (isFree(state) && me.pricer) {
+          // Free by the registry: ask the price service whether it's premium before showing it.
+          info = await me.pricer.add(`${tile.dataset.word}.${tld}`);
+          if (run !== me) return;
+          if (info && info.reserved) state = "taken";
+        }
+        setTile(tile, state, info);
         refresh();
       });
     }
