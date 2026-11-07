@@ -22,10 +22,21 @@ DNS for every name (wildcards), using RDAP only for those.
 Premium and reserved names can still show as available, so the footer reminds people to
 confirm with a registrar.
 
+## Premium names
+
+Registries charge extra for "premium" names (fin.love can be $4,000+) even though RDAP still
+reports them as unregistered. Only registrars know which names are premium, so the optional
+Cloudflare Worker in `worker/` asks Name.com's API for the price of every free name. Premium
+names are then hidden unless the visitor ticks **Show premium names**, and every free name
+shows its first-year price. Setup steps are in [`worker/README.md`](worker/README.md); until
+`priceApi` is set in `site/config.js`, the checkbox is disabled and no names are filtered.
+
 ## Files
 
 - `site/index.html`, `site/style.css`, `site/app.js`: the page
 - `site/words.js`: the word library, grouped by length (edit freely)
+- `site/config.js`: the price-check Worker URL (`priceApi`)
+- `worker/`: the price-check Cloudflare Worker (Name.com API)
 - `.github/workflows/pages.yml`: deploys `site/` to GitHub Pages on every push to `main`
 
 ## Deploying

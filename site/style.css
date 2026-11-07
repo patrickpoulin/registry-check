@@ -139,7 +139,7 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--brand); outline
 
 .grid {
   list-style: none; margin: 0; padding: 0;
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px;
 }
 .grid[data-view="available"] .tile:not([data-state="available"]):not([data-state="likely"]) { display: none; }
 .grid[data-view="taken"] .tile:not([data-state="taken"]) { display: none; }
@@ -164,6 +164,18 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--brand); outline
 
 .empty { margin: 0; color: var(--muted); }
 
+.grid:not(.show-premium) .tile[data-premium="yes"] { display: none; }
+.tile .n { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.tile .p { margin-left: auto; padding-left: 8px; flex-shrink: 0; font-size: 0.8rem; color: var(--muted); font-weight: 600; }
+.tile[data-premium="yes"] a { background: var(--unknown-bg); border: 1px solid var(--unknown); }
+.tile[data-premium="yes"] .w { color: var(--unknown); }
+.tile[data-premium="yes"] .p { color: var(--unknown); }
+
+.toggle { display: inline-flex; align-items: center; gap: 8px; margin-top: 14px; font-size: 0.9rem; font-weight: 600; cursor: pointer; }
+.toggle input { width: 18px; height: 18px; accent-color: var(--brand); margin: 0; }
+.toggle .muted { color: var(--muted); font-weight: 400; }
+.toggle.off { opacity: 0.55; cursor: not-allowed; }
+
 .foot { color: var(--muted); font-size: 0.8rem; padding: 0 4px; }
 .foot p { margin: 0; max-width: 75ch; }
 
@@ -171,7 +183,7 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--brand); outline
   .panel { padding: 16px; }
   .search { flex-direction: column; }
   .tld-field { flex-basis: auto; }
-  .grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
+  .grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
   .status-head { flex-direction: column; align-items: stretch; }
   .tabs button { flex: 1; }
 }

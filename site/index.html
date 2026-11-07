@@ -49,6 +49,10 @@
           <button type="button" role="tab" data-view="all" aria-selected="false">All <span class="count" id="n-all">0</span></button>
         </div>
       </div>
+      <label class="toggle" id="premium-toggle">
+        <input type="checkbox" id="show-premium">
+        <span>Show premium names <span class="muted" id="premium-count"></span></span>
+      </label>
       <div class="progress" aria-hidden="true"><div class="bar" id="bar"></div></div>
       <p class="progress-text" id="progress-text" aria-live="polite"></p>
       <ul id="grid" class="grid"></ul>
@@ -56,10 +60,11 @@
     </section>
 
     <footer class="foot">
-      <p>Checks run in your browser. Each name is looked up with DNS, then confirmed with the registry's public <abbr title="Registration Data Access Protocol">RDAP</abbr> service. “Available” means the registry has no record of the name. Premium or reserved names can still be priced differently or blocked, so confirm with a registrar before you buy.</p>
+      <p>Checks run in your browser. Each name is looked up with DNS, then confirmed with the registry's public <abbr title="Registration Data Access Protocol">RDAP</abbr> service. “Available” means the registry has no record of the name. Registries charge more for “premium” names (often short or common words); those are hidden unless you tick “Show premium names”, and prices come from Name.com.</p>
     </footer>
   </main>
 
+  <script src="config.js"></script>
   <script src="words.js"></script>
   <script src="app.js"></script>
 </body>
