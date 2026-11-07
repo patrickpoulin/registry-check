@@ -4,54 +4,63 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Registry Check</title>
-  <meta name="description" content="Type a word, see it on .love and other top-level domains, and check which ones are still free.">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%9D%A4%3C/text%3E%3C/svg%3E">
+  <meta name="description" content="Type a domain ending like .love and see which common 3 to 7 letter English words are still free on it.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230A66C2'/%3E%3Ctext x='16' y='23' font-family='Arial' font-weight='700' font-size='18' fill='white' text-anchor='middle'%3E.%3F%3C/text%3E%3C/svg%3E">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <span class="logo" aria-hidden="true">.?</span>
+      <span class="brand">Registry Check</span>
+    </div>
+  </header>
+
   <main class="wrap">
-    <header class="hero">
-      <h1>Registry Check</h1>
-      <p class="lede">Type a word. See it on <strong>.love</strong> and other top-level domains, and find out which ones are still free.</p>
-    </header>
+    <section class="panel intro">
+      <h1>Find free words on any domain ending</h1>
+      <p class="lede">Type an ending like <strong>.love</strong>. We'll check our library of <span id="lib-count">1,700+</span> common English words (3 to 7 letters) and show you which ones are still available.</p>
 
-    <form id="search" class="search" autocomplete="off">
-      <label for="words" class="sr-only">Words to check</label>
-      <input id="words" name="words" type="text" placeholder="sweet, puppy, true love" spellcheck="false" autofocus>
-      <button type="submit" id="go">Check</button>
-    </form>
-    <p class="hint">Separate words with commas. Spaces inside a phrase are removed, so “true love” becomes <code>truelove</code>.</p>
-
-    <section class="tlds" aria-labelledby="tld-heading">
-      <div class="tlds-head">
-        <h2 id="tld-heading">Domains to check</h2>
-        <div class="presets" id="presets"></div>
-      </div>
-      <div id="tld-groups"></div>
-      <form id="add-tld" class="add-tld" autocomplete="off">
-        <label for="custom-tld" class="sr-only">Add another domain ending</label>
-        <input id="custom-tld" type="text" placeholder="Add another, e.g. .pizza" spellcheck="false">
-        <button type="submit">Add</button>
+      <form id="search" class="search" autocomplete="off">
+        <label for="tld" class="sr-only">Domain ending</label>
+        <div class="tld-field">
+          <span class="dot-prefix" aria-hidden="true">.</span>
+          <input id="tld" name="tld" type="text" placeholder="love" spellcheck="false" autocapitalize="off" list="tld-suggest" autofocus>
+        </div>
+        <button type="submit" id="go" class="btn-primary">Check words</button>
+        <button type="button" id="stop" class="btn-secondary" hidden>Stop</button>
       </form>
+      <datalist id="tld-suggest"></datalist>
+
+      <div class="quick" id="quick" aria-label="Popular endings"></div>
+
+      <div class="lengths" role="group" aria-label="Word lengths">
+        <span class="lengths-label">Word length</span>
+        <span id="length-chips" class="chips"></span>
+      </div>
     </section>
 
-    <section id="results" class="results" aria-live="polite"></section>
+    <section id="status" class="panel status" hidden>
+      <div class="status-head">
+        <h2 id="status-title"></h2>
+        <div class="tabs" role="tablist">
+          <button type="button" role="tab" data-view="available" aria-selected="true">Available <span class="count" id="n-available">0</span></button>
+          <button type="button" role="tab" data-view="taken" aria-selected="false">Taken <span class="count" id="n-taken">0</span></button>
+          <button type="button" role="tab" data-view="all" aria-selected="false">All <span class="count" id="n-all">0</span></button>
+        </div>
+      </div>
+      <div class="progress" aria-hidden="true"><div class="bar" id="bar"></div></div>
+      <p class="progress-text" id="progress-text" aria-live="polite"></p>
+      <ul id="grid" class="grid"></ul>
+      <p id="empty" class="empty" hidden></p>
+    </section>
 
     <footer class="foot">
-      <p>Checks run in your browser. Each name is looked up in the registry's public <abbr title="Registration Data Access Protocol">RDAP</abbr> service, with a DNS check as a backup when a registry has no RDAP. “Available” means the registry has no record of the name; premium or reserved names can still be priced differently or blocked, so confirm with a registrar before you get attached.</p>
+      <p>Checks run in your browser. Each name is looked up with DNS, then confirmed with the registry's public <abbr title="Registration Data Access Protocol">RDAP</abbr> service. “Available” means the registry has no record of the name. Premium or reserved names can still be priced differently or blocked, so confirm with a registrar before you buy.</p>
     </footer>
   </main>
 
-  <template id="row-tpl">
-    <li class="row" data-state="checking">
-      <span class="domain"></span>
-      <span class="status"><span class="dot"></span><span class="label">Checking…</span></span>
-      <span class="detail"></span>
-      <a class="act" target="_blank" rel="noopener"></a>
-    </li>
-  </template>
-
-  <script src="tlds.js"></script>
+  <script src="words.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

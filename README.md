@@ -1,20 +1,23 @@
 # Registry Check ♥
 
-A static site for checking basic English words against top-level domains like `.love`.
-Type one or more words (comma separated), pick the domain endings you care about, and the
-page shows every combination (`sweet.love`, `sweet.lol`, …) with whether it looks available.
+A static site that checks a built-in library of common 3 to 7 letter English words against
+a domain ending. Type an ending like `.love` and the page checks every word in the library
+(`ace.love`, `apple.love`, …), showing which are still available. Filter by word length and
+switch between Available, Taken and All.
 
 ## How availability is checked
 
 GitHub Pages has no backend, so everything runs in the visitor's browser:
 
-1. **RDAP** (the modern replacement for WHOIS). The site loads IANA's RDAP bootstrap
-   file (`data.iana.org/rdap/dns.json`) to find each TLD's registry server, then asks it
-   about the name. `404` means the registry has no record of it (**Available**);
-   `200` means it's registered (**Taken**, with registration/expiry dates and registrar).
-2. **DNS-over-HTTPS** fallback (Google, then Cloudflare) for TLDs without RDAP or when a
-   registry blocks the browser request. `NXDOMAIN` shows as **Probably available**;
-   any records show as **Taken**.
+1. **DNS-over-HTTPS** (Google, then Cloudflare) first, because it's fast and not rate
+   limited for this volume. A name with DNS records is **Taken**.
+2. **RDAP** (the modern replacement for WHOIS) confirms the names DNS says don't exist. The
+   site loads IANA's RDAP bootstrap file (`data.iana.org/rdap/dns.json`) to find the
+   registry's server: `404` is **Available**, `200` is **Taken**. If the registry has no RDAP
+   or blocks the request, the name shows as available with a dashed outline (probably free).
+
+Before checking words, the site makes sure the ending exists and detects endings that answer
+DNS for every name (wildcards), using RDAP only for those.
 
 Premium and reserved names can still show as available, so the footer reminds people to
 confirm with a registrar.
@@ -22,7 +25,7 @@ confirm with a registrar.
 ## Files
 
 - `site/index.html`, `site/style.css`, `site/app.js`: the page
-- `site/tlds.js`: the curated list of domain endings and which are on by default
+- `site/words.js`: the word library, grouped by length (edit freely)
 - `.github/workflows/pages.yml`: deploys `site/` to GitHub Pages on every push to `main`
 
 ## Deploying
