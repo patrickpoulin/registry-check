@@ -8,7 +8,7 @@
     (name, type) => `https://dns.google/resolve?name=${encodeURIComponent(name)}&type=${type}`,
     (name, type) => `https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(name)}&type=${type}`,
   ];
-  const REGISTER_URL = (d) => `https://www.namecheap.com/domains/registration/results/?domain=${encodeURIComponent(d)}`;
+  const REGISTER_URL = (d) => `https://porkbun.com/checkout/search?q=${encodeURIComponent(d)}`;
   const PRICE_API = String((window.REGISTRY_CHECK_CONFIG || {}).priceApi || "").replace(/\/+$/, "");
   const PRICE_BATCH = 50;
   const DNS_PARALLEL = 8;
