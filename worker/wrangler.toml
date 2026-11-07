@@ -4,6 +4,6 @@ compatibility_date = "2025-01-01"
 
 [vars]
 # Sites allowed to call this Worker (comma separated). Add http://localhost:8000 for local testing.
-ALLOWED_ORIGINS = "https://patrickpoulin.github.io"
+ALLOWED_ORIGINS = "https://patrickpoulin.com,https://www.patrickpoulin.com,https://patrickpoulin.github.io"
 # Name.com API base. Use https://api.dev.name.com/v4 with a test token while trying things out.
 NAMECOM_API = "https://api.name.com/v4"

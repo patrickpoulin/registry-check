@@ -34,7 +34,7 @@ The "Show premium names" checkbox turns on once `priceApi` is set.
 
 ```sh
 curl -X POST https://registry-check-prices.<you>.workers.dev/check \
-  -H "Origin: https://patrickpoulin.github.io" \
+  -H "Origin: https://patrickpoulin.com" \
   -d '{"domains":["fin.love","zebrafish.love"]}'
 ```
 
