@@ -3,5 +3,5 @@
 // "https://registry-check-prices.<you>.workers.dev"). Leave empty to turn off
 // premium detection; the "Show premium names" checkbox is then disabled.
 window.REGISTRY_CHECK_CONFIG = {
-  priceApi: "",
+  priceApi: "https://registry-check.loucheproductions.workers.dev",
 };
